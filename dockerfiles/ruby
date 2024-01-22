@@ -119,8 +119,6 @@ ENV PATH $GEM_HOME/bin:$PATH
 # adjust permissions of a few directories for running "gem install" as an arbitrary user
 RUN mkdir -p "$GEM_HOME" && chmod 1777 "$GEM_HOME"
 
-CMD [ "irb" ]
-
 FROM --platform=i386 ruby-3-3-0-buster as base
 ARG DEBIAN_FRONTEND=noninteractive
 

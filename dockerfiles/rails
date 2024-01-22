@@ -119,53 +119,58 @@ ENV PATH $GEM_HOME/bin:$PATH
 # adjust permissions of a few directories for running "gem install" as an arbitrary user
 RUN mkdir -p "$GEM_HOME" && chmod 1777 "$GEM_HOME"
 
-CMD [ "irb" ]
-
 FROM --platform=i386 ruby-3-3-0-buster as base
 
 # Rails app lives here
-WORKDIR /ruby
+WORKDIR /rails
 
 # Set environment
-ENV RACK_ENV="development" \
+ENV RAILS_ENV="development" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle"
+
 
 # Throw-away build stage to reduce size of final image
 FROM base as build
 
 # Install packages needed to build gems
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libvips pkg-config
+    apt-get install --no-install-recommends -y build-essential git libvips pkg-config sqlite3
 
 # Install application gems
-COPY /rack_app/Gemfile /rack_app/Gemfile.lock ./
+COPY /rails_app/Gemfile /rails_app/Gemfile.lock ./
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
 
 # Copy application code
-COPY /rack_app .
+COPY /rails_app .
+
+# Precompile bootsnap code for faster boot times
+RUN bundle exec bootsnap precompile app/ lib/
+
+# Precompiling assets without requiring secret RAILS_MASTER_KEY
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 # Final stage for app image
 FROM base
 
 # Install packages needed for deployment
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl && \
+    apt-get install --no-install-recommends -y curl libsqlite3-0 libvips && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Copy built artifacts: gems, application
 COPY --from=build /usr/local/bundle /usr/local/bundle
-COPY --from=build /ruby /ruby
+COPY --from=build /rails /rails
 
 # Run and own only the runtime files as a non-root user for security
-RUN useradd ruby --create-home --shell /bin/bash && \
-    chown -R ruby:ruby .
-USER ruby:ruby
+RUN useradd rails --create-home --shell /bin/bash && \
+    chown -R rails:rails db log storage tmp config
+USER rails:rails
 
-ENTRYPOINT ["/ruby/bin/docker-entrypoint"]
+# Entrypoint prepares the database.
+ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
 # Start the server by default, this can be overwritten at runtime
-EXPOSE 9292
-CMD ["./bin/rackup"]
-
+EXPOSE 3000
+CMD ["./bin/rails", "server"]
