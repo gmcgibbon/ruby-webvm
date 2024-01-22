@@ -165,7 +165,7 @@ jobs:
       # Result is an ext2 image for webvm.
 
       # Move required files for gh-pages deployment to the deployment directory $DEPLOY_DIR.
-      - run: sudo mv assets examples xterm favicon.ico index.html login.html network.js scrollbar.css serviceWorker.js tower.ico $DEPLOY_DIR
+      - run: sudo mv assets xterm favicon.ico index.html login.html network.js scrollbar.css serviceWorker.js tower.ico $DEPLOY_DIR
       
       # The .txt suffix enabled HTTP compression for free
       - name: Generate image split chunks and .meta file
