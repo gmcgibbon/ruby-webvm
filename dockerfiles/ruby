@@ -1,0 +1,26 @@
+# syntax = docker/dockerfile:1
+
+# Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
+ARG RUBY_VERSION=3.3.0
+ARG DEBIAN_FRONTEND=noninteractive
+FROM --platform=i386 registry.docker.com/library/ruby:$RUBY_VERSION-slim as base
+
+# Throw-away build stage to reduce size of final image
+FROM base as build
+
+# Install packages needed to build gems
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git libvips pkg-config sqlite3
+
+# Final stage for app image
+FROM base
+
+# Install packages needed for deployment
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y vim git curl && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Make a user, then copy over the /example directory
+RUN useradd -m user && echo "user:password" | chpasswd
+RUN echo 'root:password' | chpasswd
+CMD [ "/bin/bash" ]

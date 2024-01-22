@@ -11,7 +11,7 @@ on:
         type: string
         description: 'Path to the Dockerfile'
         required: true
-        default: 'app/Dockerfile'
+        default: 'dockerfiles/ruby'
 
       IMAGE_SIZE:
         type: string
